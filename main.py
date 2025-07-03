@@ -1,4 +1,3 @@
-from math import floor
 from time import time, sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -22,28 +21,40 @@ me_know_you_use_cookies.click()
 cookie = cookie_monster.find_element(By.ID, "bigCookie")
 
 # Yum yum yum yum yum!
-five_minutes = time() + 60 * 5
-cookies_per_second = 0
+start_time = time()
+end_time = start_time + 60 * 5
+current_time = start_time
 
-while time() < five_minutes:
+while current_time < end_time:
     cookie.click()
-    # Purchase the most expensive upgrade possible every five seconds.
-    if floor(five_minutes - time()) % 5 == 0:
-        cookies_raw_text = cookie_monster.find_element(By.ID, "cookies").text
-        number_of_cookies = int(cookies_raw_text.split("\n")[0].split(" ")[0])
-        cookies_per_second = float(cookies_raw_text.split("\n")[1].split(" ")[2])
 
-        buy_buttons = cookie_monster.find_elements(By.CSS_SELECTOR, ".product.unlocked.enabled")
+    # Purchase best upgrade every five seconds
+    # (every five seconds determined by whether the elapsed number of seconds is a multiple of five).
+    if round(current_time - start_time) % 5 == 0:
+        # The project specification says: "purchase the most expensive [upgrade].
+        # You'll need to check how much money (cookies) you have against the price of each upgrade."
 
-        price_elements = cookie_monster.find_elements(By.CSS_SELECTOR, ".product.unlocked.enabled .price")
-        prices_ascending = [int(price_element.text.replace(",", "")) for price_element in price_elements]
-        prices_descending = prices_ascending[::-1]
+        # But, from my observation of the game, this is not at all the best solution.
+        # Upgrades are only unlocked once you have enough cookies to afford them,
+        # so there's no need to compare the number of cookies to the prices
+        # in order to determine which is the most expensive purchasable.
+        # The most expensive purchasable is usually the last unlocked upgrade.
+        # We can save a significant amount of processing time by just clicking the last unlocked upgrade.
 
-        for i in range(len(prices_descending)):
-            if number_of_cookies > prices_descending[i]:
-                buy_button = buy_buttons[i]
-                buy_button.click()
-                break
+        # Additionally, the most expensive purchasable might not be the most high-ROI upgrade.
+        # For example, if you buy a lot of cursors, they can become more expensive than the grandma, and yet the grandma
+        # has a higher-ROI in the sense that she increases your cookies per second more for fewer cookies.
+        # So this is the second reason why it's best to just buy the last unlocked upgrade:
+        # it always has the highest ROI.
 
-print(cookies_per_second)
+        upgrades = cookie_monster.find_elements(By.CSS_SELECTOR, ".product.unlocked.enabled")
+        if len(upgrades) > 0:
+            upgrades[-1].click()
+
+    # Refresh current time
+    current_time = time()
+
+cookies_per_second = float(cookie_monster.find_element(By.ID, "cookies").text.split("\n")[1].split(" ")[2])
+print("Closing cookies per second: ", cookies_per_second)
+
 cookie_monster.quit()
